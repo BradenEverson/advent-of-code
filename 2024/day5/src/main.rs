@@ -68,24 +68,24 @@ pub fn is_valid_update(rules: &HashMap<i32, Vec<i32>>, updates: &[i32]) -> Optio
 }
 
 pub fn reorder_update(rules: &HashMap<i32, Vec<i32>>, updates: &[i32]) -> Vec<i32> {
-    let mut remaining: HashSet<_> = updates.iter().cloned().collect();
+    let mut remaining: HashSet<_> = updates.iter().collect();
     let mut ordered = Vec::new();
 
     while !remaining.is_empty() {
         let mut added = false;
 
-        for &candidate in remaining.clone().iter() {
+        for &candidate in remaining.iter() {
             if let Some(all_rules_for_candidate) = rules.get(&candidate) {
                 if all_rules_for_candidate.iter().all(|&before_needed| {
                     !remaining.contains(&before_needed) || ordered.contains(&before_needed)
                 }) {
-                    ordered.push(candidate);
+                    ordered.push(*candidate);
                     remaining.remove(&candidate);
                     added = true;
                     break;
                 }
             } else {
-                ordered.push(candidate);
+                ordered.push(*candidate);
                 remaining.remove(&candidate);
                 added = true;
                 break;
