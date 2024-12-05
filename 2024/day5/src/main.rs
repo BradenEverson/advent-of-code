@@ -91,10 +91,6 @@ pub fn reorder_update(rules: &HashMap<i32, Vec<i32>>, updates: &[i32]) -> Vec<i3
                 break;
             }
         }
-
-        if !added {
-            panic!("Cycle detected in ordering rules!");
-        }
     }
 
     ordered
