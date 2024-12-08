@@ -32,8 +32,7 @@ fn main() {
             let rest = &antenna_points[(spot + 1)..];
             for other in rest {
                 // get all points "In line" of the two
-
-                let valid_points = points
+                points
                     .iter()
                     .filter(|point| {
                         let slope_a = point.slope(antenna);
@@ -41,15 +40,13 @@ fn main() {
 
                         slope_a == slope_b || point == &antenna || point == &other
                     })
-                    .collect::<Vec<_>>();
-
-                for test_point in valid_points {
-                    //if antenna.dist(&test_point) == other.dist(&test_point) * 2f32
-                    //|| other.dist(&test_point) == antenna.dist(&test_point) * 2f32
-                    //{
-                    total_antinodes.insert((test_point.0 as i32, test_point.1 as i32));
-                    //}
-                }
+                    /*.filter(|point| {
+                        antenna.dist(point) == other.dist(point) * 2f32
+                            || other.dist(point) == antenna.dist(point) * 2f32
+                    })*/
+                    .for_each(|test_point| {
+                        total_antinodes.insert((test_point.0 as i32, test_point.1 as i32));
+                    });
             }
         }
     }
