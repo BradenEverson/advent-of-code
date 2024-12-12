@@ -7,7 +7,7 @@ use std::{
 use slotmap::{new_key_type, SlotMap};
 
 fn main() {
-    let mut file = File::open("data/input").expect("Open data");
+    let mut file = File::open("data/test_x_o").expect("Open data");
     let mut buf = String::new();
     file.read_to_string(&mut buf)
         .expect("Failed to write to buffer");
@@ -96,91 +96,63 @@ impl Garden {
     }
 
     pub fn num_sides(&self, ctx: &SlotMap<GraphKey, GardenNode>) -> usize {
-        let mut horizontal_edges: HashSet<(usize, usize)> = HashSet::new(); // (y, x)
-        let mut vertical_edges: HashSet<(usize, usize)> = HashSet::new(); // (x, y)
+        let node_coords: Vec<_> = self
+            .vals
+            .iter() /*.map(|key| ctx[*key])*/
+            .map(|node| {
+                let (x, y) = self.coords[node];
+                (x + 2, y + 2)
+            })
+            .collect();
 
-        for &key in &self.vals {
-            let &(x, y) = self.coords.get(&key).unwrap();
-            let node = ctx[key];
+        // Coords that belong to this garden (helps when creating the walk around path
+        let my_coords = node_coords
+            .iter()
+            .map(|(x, y)| (*x, *y))
+            .collect::<HashSet<(usize, usize)>>();
 
-            if let Some(up_key) = node.directions[Direction::Up as usize] {
-                if !self.vals.contains(&up_key) || ctx[up_key].val != node.val {
-                    horizontal_edges.insert((y, x));
-                }
-            } else {
-                horizontal_edges.insert((y, x));
-            }
+        let mut buffer_coords = HashSet::new();
 
-            if let Some(down_key) = node.directions[Direction::Down as usize] {
-                if !self.vals.contains(&down_key) || ctx[down_key].val != node.val {
-                    horizontal_edges.insert((y + 1, x));
-                }
-            } else {
-                horizontal_edges.insert((y + 1, x));
-            }
+        for (x, y) in node_coords {
+            for dx in -1..=1 {
+                let curr_x = x as isize + dx;
+                for dy in -1..=1 {
+                    let curr_y = y as isize + dy;
 
-            if let Some(left_key) = node.directions[Direction::Left as usize] {
-                if !self.vals.contains(&left_key) || ctx[left_key].val != node.val {
-                    vertical_edges.insert((x, y));
-                }
-            } else {
-                vertical_edges.insert((x, y));
-            }
-
-            if let Some(right_key) = node.directions[Direction::Right as usize] {
-                if !self.vals.contains(&right_key) || ctx[right_key].val != node.val {
-                    vertical_edges.insert((x + 1, y));
-                }
-            } else {
-                vertical_edges.insert((x + 1, y));
-            }
-        }
-
-        let hor_map: HashMap<usize, Vec<usize>> =
-            horizontal_edges
-                .iter()
-                .fold(HashMap::new(), |mut acc, &(y, x)| {
-                    acc.entry(y).or_default().push(x);
-                    acc
-                });
-
-        let ver_map: HashMap<usize, Vec<usize>> =
-            vertical_edges
-                .iter()
-                .fold(HashMap::new(), |mut acc, &(x, y)| {
-                    acc.entry(x).or_default().push(y);
-                    acc
-                });
-
-        fn count_groups(edge_map: &HashMap<usize, Vec<usize>>) -> usize {
-            edge_map
-                .values()
-                .map(|positions| {
-                    let mut sorted = positions.clone();
-                    sorted.sort_unstable();
-                    let mut groups = 0;
-                    let mut prev = None;
-
-                    for &pos in &sorted {
-                        if let Some(prev_pos) = prev {
-                            if pos != prev_pos + 1 {
-                                groups += 1;
-                            }
-                        } else {
-                            groups += 1;
-                        }
-                        prev = Some(pos);
+                    if !my_coords.contains(&(curr_x as usize, curr_y as usize)) {
+                        buffer_coords.insert((curr_x as usize, curr_y as usize));
                     }
-
-                    groups
-                })
-                .sum()
+                }
+            }
         }
 
-        let horizontal_groups = count_groups(&hor_map);
-        let vertical_groups = count_groups(&ver_map);
+        let mut corners = 0;
 
-        horizontal_groups + vertical_groups
+        buffer_coords.iter().for_each(|(x, y)| {
+            let up = (*x, *y - 1);
+            let down = (*x, *y + 1);
+            let left = (*x - 1, *y);
+            let right = (*x + 1, *y);
+            let directions = [up, down, left, right];
+
+            let matching = my_coords
+                .iter()
+                .filter(|coord| directions.contains(*coord))
+                .count();
+
+            let matching_ignore = buffer_coords
+                .iter()
+                .filter(|coord| directions.contains(*coord))
+                .count();
+
+            if matching == 0 || matching == 2 {
+                corners += 1;
+            } else if matching == 4 {
+                corners += 4
+            }
+        });
+
+        corners
     }
 
     pub fn area(&self) -> usize {
@@ -299,3 +271,120 @@ impl GardenGroups {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use std::{fs::File, io::Read};
+
+    use crate::GardenGroups;
+    #[test]
+    fn test_1() {
+        let mut file = File::open("data/test").expect("Open data");
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)
+            .expect("Failed to write to buffer");
+        let chars: Vec<Vec<char>> = buf
+            .lines()
+            .map(|line| line.chars().collect::<Vec<char>>())
+            .collect();
+        let garden_groups = GardenGroups::from_chars(&chars);
+
+        let sides_sum: usize = garden_groups
+            .get_gardens()
+            .iter()
+            .map(|garden| garden.area() * garden.num_sides(&garden_groups.graph))
+            .sum();
+
+        assert_eq!(sides_sum, 80)
+    }
+
+    #[test]
+    /*
+    EEEEE
+    EXXXX
+    EEEEE
+    EXXXX
+    EEEEE
+    */
+    fn test_2() {
+        let mut file = File::open("data/test2").expect("Open data");
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)
+            .expect("Failed to write to buffer");
+        let chars: Vec<Vec<char>> = buf
+            .lines()
+            .map(|line| line.chars().collect::<Vec<char>>())
+            .collect();
+        let garden_groups = GardenGroups::from_chars(&chars);
+
+        let sides_sum: usize = garden_groups
+            .get_gardens()
+            .iter()
+            .map(|garden| garden.area() * garden.num_sides(&garden_groups.graph))
+            .sum();
+
+        assert_eq!(sides_sum, 236)
+    }
+
+    #[test]
+    fn test_3() {
+        let mut file = File::open("data/test3").expect("Open data");
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)
+            .expect("Failed to write to buffer");
+        let chars: Vec<Vec<char>> = buf
+            .lines()
+            .map(|line| line.chars().collect::<Vec<char>>())
+            .collect();
+        let garden_groups = GardenGroups::from_chars(&chars);
+
+        let sides_sum: usize = garden_groups
+            .get_gardens()
+            .iter()
+            .map(|garden| garden.area() * garden.num_sides(&garden_groups.graph))
+            .sum();
+
+        assert_eq!(sides_sum, 368)
+    }
+
+    #[test]
+    fn x_o_test() {
+        let mut file = File::open("data/test_x_o").expect("Open data");
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)
+            .expect("Failed to write to buffer");
+        let chars: Vec<Vec<char>> = buf
+            .lines()
+            .map(|line| line.chars().collect::<Vec<char>>())
+            .collect();
+        let garden_groups = GardenGroups::from_chars(&chars);
+
+        let sides_sum: usize = garden_groups
+            .get_gardens()
+            .iter()
+            .map(|garden| garden.area() * garden.num_sides(&garden_groups.graph))
+            .sum();
+
+        assert_eq!(sides_sum, 436)
+    }
+
+    #[test]
+    fn test_big_example() {
+        let mut file = File::open("data/big_example").expect("Open data");
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)
+            .expect("Failed to write to buffer");
+        let chars: Vec<Vec<char>> = buf
+            .lines()
+            .map(|line| line.chars().collect::<Vec<char>>())
+            .collect();
+        let garden_groups = GardenGroups::from_chars(&chars);
+
+        let sides_sum: usize = garden_groups
+            .get_gardens()
+            .iter()
+            .map(|garden| garden.area() * garden.num_sides(&garden_groups.graph))
+            .sum();
+
+        assert_eq!(sides_sum, 1206)
+    }
+}
