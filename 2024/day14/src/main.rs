@@ -3,6 +3,7 @@ use std::{
     fs::{self, File},
     io::Read,
     path::Path,
+    process::Command,
 };
 
 fn main() {
@@ -29,7 +30,7 @@ fn main() {
     }
 
     for step in 0..total_steps {
-        let current_image = save_grid_as_image(&robots, width, height);
+        let current_image = save_grid_as_image(&robots, width, height, step);
 
         if contains_subimage(&current_image, &pattern) {
             println!("Christmas tree pattern detected at step: {}", step);
@@ -40,6 +41,7 @@ fn main() {
             robot.update_position(width, height);
         }
     }
+    generate_video_from_frames("trees.mp4", 60);
 }
 
 struct Robot {
@@ -51,6 +53,30 @@ impl Robot {
     fn update_position(&mut self, width: i32, height: i32) {
         self.position.0 = (self.position.0 + self.velocity.0).rem_euclid(width);
         self.position.1 = (self.position.1 + self.velocity.1).rem_euclid(height);
+    }
+}
+
+fn generate_video_from_frames(output_video: &str, frame_rate: u32) {
+    let status = Command::new("ffmpeg")
+        .arg("-y")
+        .arg("-framerate")
+        .arg(frame_rate.to_string())
+        .arg("-i")
+        .arg("imgs/%05d.png")
+        .arg("-vf")
+        .arg("pad=width=102:height=104:x=0:y=0:color=black")
+        .arg("-c:v")
+        .arg("libx264")
+        .arg("-pix_fmt")
+        .arg("yuv420p")
+        .arg(output_video)
+        .status()
+        .expect("Failed to execute ffmpeg");
+
+    if status.success() {
+        println!("Video successfully created: {}", output_video);
+    } else {
+        eprintln!("Error occurred while creating video.");
     }
 }
 
@@ -87,7 +113,7 @@ fn parse_input(input: &str) -> Vec<Robot> {
         .collect()
 }
 
-fn save_grid_as_image(robots: &[Robot], width: i32, height: i32) -> RgbImage {
+fn save_grid_as_image(robots: &[Robot], width: i32, height: i32, step: usize) -> RgbImage {
     let mut img = RgbImage::new(width as u32, height as u32);
 
     for pixel in img.pixels_mut() {
@@ -101,6 +127,9 @@ fn save_grid_as_image(robots: &[Robot], width: i32, height: i32) -> RgbImage {
             img.put_pixel(x, y, Rgb([0, 255, 0]));
         }
     }
+
+    let file_name = format!("imgs/{:05}.png", step);
+    img.save(&file_name).expect("Failed to save image");
 
     img
 }
