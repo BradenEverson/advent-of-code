@@ -1,11 +1,12 @@
 use std::{
+    collections::HashSet,
     fs::File,
     io::{self, BufRead},
     path::Path,
 };
 
 fn main() {
-    let path = "data/input";
+    let path = "data/test2";
     let input = read_lines(path).expect("Could not read file");
 
     let mut warehouse = Vec::new();
@@ -37,6 +38,7 @@ fn main() {
         };
 
         move_robot(&mut warehouse, &mut robot_pos, dx, dy);
+        print_warehouse(&warehouse);
     }
 
     let mut gps_sum = 0;
@@ -88,6 +90,13 @@ fn scale_warehouse(warehouse: &Vec<Vec<char>>) -> Vec<Vec<char>> {
         scaled.push(scaled_row.clone());
     }
     scaled
+}
+
+fn get_connected_boxes(
+    point: (usize, usize),
+    warehouse: &Vec<Vec<char>>,
+) -> HashSet<(usize, usize)> {
+    todo!()
 }
 
 fn move_robot(
