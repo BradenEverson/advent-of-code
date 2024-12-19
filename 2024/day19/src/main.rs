@@ -23,6 +23,12 @@ fn main() {
         .count();
 
     println!("Possible patterns we can make: {can_create}");
+
+    let combinations: usize = patterns
+        .iter()
+        .map(|pattern| count_unique_combinations(&has, pattern, &mut HashMap::new()))
+        .sum();
+    println!("{combinations} possible combinations");
 }
 
 fn pattern_can_be_created(
@@ -44,5 +50,27 @@ fn pattern_can_be_created(
         }
         cache.insert(pattern.to_string(), false);
         false
+    }
+}
+
+fn count_unique_combinations(
+    options: &[&str],
+    pattern: &str,
+    cache: &mut HashMap<String, usize>,
+) -> usize {
+    if pattern.is_empty() {
+        1
+    } else if let Some(&cached) = cache.get(pattern) {
+        cached
+    } else {
+        let mut count = 0;
+        for option in options {
+            if pattern.starts_with(option) {
+                count += count_unique_combinations(options, &pattern[option.len()..], cache);
+            }
+        }
+
+        cache.insert(pattern.to_string(), count);
+        count
     }
 }
