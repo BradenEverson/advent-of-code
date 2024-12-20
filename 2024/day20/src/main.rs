@@ -6,7 +6,7 @@ use std::{
 };
 
 fn main() {
-    let mut file = File::open("data/test").expect("Open data");
+    let mut file = File::open("data/input").expect("Open data");
     let mut buf = String::new();
     file.read_to_string(&mut buf)
         .expect("Failed to write to buffer");
@@ -47,29 +47,36 @@ fn main() {
 
     println!("Score to beat {baseline_score}");
 
-    /*if let Some(path) = astar(player, goal, &obstacles, width, height) {
-        for y in 0..height {
-            for x in 0..width {
-                if obstacles.contains(&(x, y)) {
-                    print!("#");
-                } else if path.contains(&(x, y)) {
-                    print!("O");
-                } else {
-                    print!(".");
-                }
+    let mut cheats: HashMap<usize, usize> = HashMap::new();
+    for i in 0..baseline.len() {
+        for j in (i + 1)..baseline.len() {
+            let dist = manhattan_dist(baseline[i], baseline[j]);
+            if dist < 21 && (j - i) > dist {
+                *cheats.entry((j - i) - dist).or_default() += 1;
             }
-            println!();
         }
-        println!("Path length: {}", path.len() - 1);
-    } else {
-        println!("No path found");
-    }*/
+    }
+
+    let count: usize = cheats
+        .iter()
+        .filter(|(picosec, _)| *picosec >= &100)
+        .map(|(_, combos)| combos)
+        .sum();
+
+    println!("Number of cheated scores that beat by at least 100 {count}");
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 struct Node {
     position: (usize, usize),
     cost: usize,
+}
+
+pub fn manhattan_dist(a: (usize, usize), b: (usize, usize)) -> usize {
+    let (x1, y1) = (a.0 as isize, a.1 as isize);
+    let (x2, y2) = (b.0 as isize, b.1 as isize);
+
+    ((x2 - x1).abs() + (y2 - y1).abs()) as usize
 }
 
 impl Ord for Node {
@@ -88,8 +95,7 @@ impl PartialOrd for Node {
 }
 
 fn heuristic(a: (usize, usize), b: (usize, usize)) -> usize {
-    //((a.0 as i16 - b.0 as i16).abs() + (a.1 as i16 - b.1 as i16).abs()) as u16
-    0
+    ((a.0 as isize - b.0 as isize).abs() + (a.1 as isize - b.1 as isize).abs()) as usize
 }
 
 fn astar(
