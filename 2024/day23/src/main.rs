@@ -22,7 +22,17 @@ fn main() {
         .filter(|triangle| triangle.iter().filter(|node| node.starts_with('t')).count() > 0)
         .collect::<Vec<_>>();
 
-    println!("{}", interconnections.len())
+    println!("{}", interconnections.len());
+
+    //PART 2
+
+    let largest_clique = graph.find_largest_clique();
+
+    let mut sorted_clique = largest_clique.clone();
+    sorted_clique.sort();
+    let password = sorted_clique.join(",");
+
+    println!("Password to the LAN party: {}", password);
 }
 
 #[derive(Default, Debug)]
@@ -82,5 +92,55 @@ impl<'a> LanGraph<'a> {
             }
         }
         triangles
+    }
+
+    pub fn find_largest_clique(&self) -> Vec<&'a str> {
+        let mut largest_clique = Vec::new();
+        let mut all_cliques = Vec::new();
+
+        let mut p: HashSet<&str> = self.nodes.keys().cloned().collect();
+        let mut r: HashSet<&str> = HashSet::new();
+        let mut x: HashSet<&str> = HashSet::new();
+
+        self.bron_kerbosch(&mut r, &mut p, &mut x, &mut all_cliques);
+
+        for clique in all_cliques {
+            if clique.len() > largest_clique.len() {
+                largest_clique = clique;
+            }
+        }
+
+        largest_clique
+    }
+
+    fn bron_kerbosch(
+        &self,
+        r: &mut HashSet<&'a str>,
+        p: &mut HashSet<&'a str>,
+        x: &mut HashSet<&'a str>,
+        all_cliques: &mut Vec<Vec<&'a str>>,
+    ) {
+        if p.is_empty() && x.is_empty() {
+            all_cliques.push(r.iter().cloned().collect());
+            return;
+        }
+
+        let p_clone = p.clone();
+        for &node in &p_clone {
+            r.insert(node);
+            let neighbors = self.nodes[node]
+                .connections
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
+            let mut new_p = p.intersection(&neighbors).cloned().collect();
+            let mut new_x = x.intersection(&neighbors).cloned().collect();
+
+            self.bron_kerbosch(r, &mut new_p, &mut new_x, all_cliques);
+
+            r.remove(node);
+            p.remove(node);
+            x.insert(node);
+        }
     }
 }
