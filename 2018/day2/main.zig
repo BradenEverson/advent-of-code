@@ -55,8 +55,6 @@ pub fn main() !void {
             }
         }
     }
-
-    // srijafjzloguvlntqmphenbkd
 }
 
 pub fn numDifferences(cmp: []const u8, to: []const u8) u32 {
