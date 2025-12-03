@@ -17,7 +17,8 @@ pub fn main() void {
 
             const curr = digit - '0';
 
-            joltage += @as(u64, curr) * (std.math.powi(u64, 10, 12 - i) catch @panic("overflow L"));
+            const place = std.math.powi(u64, 10, 12 - i) catch @panic("overflow L");
+            joltage += @as(u64, curr) * place;
         }
 
         joltage_sum += joltage;
