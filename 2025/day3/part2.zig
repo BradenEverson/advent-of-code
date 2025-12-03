@@ -6,23 +6,18 @@ pub fn main() void {
     var joltage_sum: u64 = 0;
 
     while (lines.next()) |line| {
-        var joltage_places: [12]u8 = undefined;
         var idx: usize = 0;
+
+        var joltage: u64 = 0;
 
         for (1..13) |i| {
             const spots_required_after = 12 - i;
 
             const digit, idx = max(line, idx, line.len - spots_required_after);
 
-            joltage_places[i - 1] = digit;
-        }
+            const curr = digit - '0';
 
-        var joltage: u64 = 0;
-
-        for (0..12) |i| {
-            const curr = joltage_places[11 - i] - '0';
-
-            joltage += @as(u64, curr) * (std.math.powi(u64, 10, i) catch @panic("overflow"));
+            joltage += @as(u64, curr) * (std.math.powi(u64, 10, 12 - i) catch @panic("overflow L"));
         }
 
         joltage_sum += joltage;
