@@ -17,7 +17,7 @@ pub fn main() void {
     };
 
     var total: u64 = 0;
-    var this_run: u64 = 0;
+    var this_run: u64 = 1;
 
     var grid: [height][width]u8 = undefined;
     var l: usize = 0;
@@ -31,7 +31,7 @@ pub fn main() void {
         l += 1;
     }
 
-    while (true) {
+    while (this_run != 0) {
         this_run = 0;
         for (0..height) |line| {
             for (0..width) |col| {
@@ -49,10 +49,6 @@ pub fn main() void {
         }
 
         total += this_run;
-
-        if (this_run == 0) {
-            break;
-        }
     }
 
     std.debug.print("{} rolls\n", .{total});
