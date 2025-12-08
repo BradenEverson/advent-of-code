@@ -1,5 +1,5 @@
 const std = @import("std");
-const input = @embedFile("data/test");
+const input = @embedFile("data/input");
 
 pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -27,9 +27,9 @@ pub fn main() void {
     while (lines.next()) |line| {
         var xyz = std.mem.tokenizeAny(u8, line, ",");
 
-        const x = std.fmt.parseFloat(f32, xyz.next().?) catch @panic("Failed to parse");
-        const y = std.fmt.parseFloat(f32, xyz.next().?) catch @panic("Failed to parse");
-        const z = std.fmt.parseFloat(f32, xyz.next().?) catch @panic("Failed to parse");
+        const x = std.fmt.parseInt(i64, xyz.next().?, 10) catch @panic("Failed to parse");
+        const y = std.fmt.parseInt(i64, xyz.next().?, 10) catch @panic("Failed to parse");
+        const z = std.fmt.parseInt(i64, xyz.next().?, 10) catch @panic("Failed to parse");
 
         points[idx] = Point{ .x = x, .y = y, .z = z };
         idx += 1;
@@ -58,6 +58,9 @@ pub fn main() void {
 
             if (size == need) {
                 // 3206508800 - too low
+                // .......... it was too low cause i was using floats...
+                // that was 2 hours of debugging...
+
                 std.debug.print("Final Connection reached!\n{}\n", .{dist.a.x * dist.b.x});
                 break;
             }
@@ -80,9 +83,9 @@ pub fn sizeOfCircuit(start: *Point, val: *u64, seen: *std.ArrayList(*Point), all
 }
 
 pub const Point = struct {
-    x: f32,
-    y: f32,
-    z: f32,
+    x: i64,
+    y: i64,
+    z: i64,
 
     connections: std.ArrayList(*Point) = .{},
 
@@ -100,19 +103,23 @@ pub const Point = struct {
         self.connections.deinit(alloc);
     }
 
-    pub fn dist(self: *const Point, other: *const Point) f32 {
-        const x = std.math.pow(f32, self.x - other.x, 2);
-        const y = std.math.pow(f32, self.y - other.y, 2);
-        const z = std.math.pow(f32, self.z - other.z, 2);
+    pub fn dist(self: *const Point, other: *const Point) i64 {
+        const x = std.math.pow(i64, self.x - other.x, 2);
+        const y = std.math.pow(i64, self.y - other.y, 2);
+        const z = std.math.pow(i64, self.z - other.z, 2);
 
-        return std.math.sqrt(x + y + z);
+        const res = x + y + z;
+
+        const res_f: f32 = @floatFromInt(res);
+
+        return @intFromFloat(std.math.sqrt(res_f));
     }
 };
 
 pub const Pair = struct {
     a: *Point,
     b: *Point,
-    dist: f32,
+    dist: i64,
     pub fn init(a: *Point, b: *Point) Pair {
         return Pair{ .a = a, .b = b, .dist = a.dist(b) };
     }
