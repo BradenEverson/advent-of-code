@@ -33,26 +33,9 @@ pub fn main() void {
             const prev = starting_points[idx - 1];
             const curr = starting_points[idx];
 
-            const start_x = @min(prev.x, curr.x);
-            const end_x = @max(prev.x, curr.x);
+            const l = Range.init(prev, curr);
 
-            const start_y = @min(prev.y, curr.y);
-            const end_y = @max(prev.y, curr.y);
-
-            const top_left = Point{ .x = start_x, .y = start_y };
-            const top_right = Point{ .x = end_x, .y = start_y };
-            const bottom_left = Point{ .x = start_x, .y = end_y };
-            const bottom_right = Point{ .x = end_x, .y = end_y };
-
-            const line_a = Range.init(top_left, top_right);
-            const line_b = Range.init(top_left, bottom_left);
-            const line_c = Range.init(bottom_left, bottom_right);
-            const line_d = Range.init(top_right, bottom_right);
-
-            valid_points.append(alloc, line_a) catch @panic("Failed to append");
-            valid_points.append(alloc, line_b) catch @panic("Failed to append");
-            valid_points.append(alloc, line_c) catch @panic("Failed to append");
-            valid_points.append(alloc, line_d) catch @panic("Failed to append");
+            valid_points.append(alloc, l) catch @panic("Failed to append");
         }
 
         idx += 1;
@@ -61,26 +44,9 @@ pub fn main() void {
     const prev = starting_points[0];
     const curr = starting_points[idx - 1];
 
-    const start_x = @min(prev.x, curr.x);
-    const end_x = @max(prev.x, curr.x);
+    const l = Range.init(prev, curr);
 
-    const start_y = @min(prev.y, curr.y);
-    const end_y = @max(prev.y, curr.y);
-
-    const top_left = Point{ .x = start_x, .y = start_y };
-    const top_right = Point{ .x = end_x, .y = start_y };
-    const bottom_left = Point{ .x = start_x, .y = end_y };
-    const bottom_right = Point{ .x = end_x, .y = end_y };
-
-    const line_a = Range.init(top_left, top_right);
-    const line_b = Range.init(top_left, bottom_left);
-    const line_c = Range.init(bottom_left, bottom_right);
-    const line_d = Range.init(top_right, bottom_right);
-
-    valid_points.append(alloc, line_a) catch @panic("Failed to append");
-    valid_points.append(alloc, line_b) catch @panic("Failed to append");
-    valid_points.append(alloc, line_c) catch @panic("Failed to append");
-    valid_points.append(alloc, line_d) catch @panic("Failed to append");
+    valid_points.append(alloc, l) catch @panic("Failed to append");
 
     var largest: u64 = 0;
 
@@ -101,27 +67,60 @@ pub fn main() void {
 }
 
 const Range = struct {
-    min_x: u64,
-    max_x: u64,
-    min_y: u64,
-    max_y: u64,
+    a: Point,
+    b: Point,
+    horizontal: bool,
 
     pub fn init(a: Point, b: Point) Range {
+        const horizontal = a.y == b.y;
+
         return Range{
-            .min_x = @min(a.x, b.x),
-            .max_x = @max(a.x, b.x),
-            .min_y = @min(a.y, b.y),
-            .max_y = @max(a.y, b.y),
+            .a = a,
+            .b = b,
+            .horizontal = horizontal,
         };
     }
 
-    pub fn inRange(self: *const Range, check: *const Range) bool {
-        return check.min_x >= self.min_x and
-            check.max_x <= self.max_x and
-            check.min_y >= self.min_y and
-            check.max_y <= self.max_y;
+    pub fn containsPoint(self: *const Range, a: Point) bool {
+        if (self.horizontal) {
+            const min = @min(self.a.x, self.b.x);
+            const max = @max(self.a.x, self.b.x);
+            return a.y == self.a.y and a.x >= min and a.x <= max;
+        } else {
+            const min = @min(self.a.y, self.b.y);
+            const max = @max(self.a.y, self.b.y);
+            return a.x == self.a.x and a.y >= min and a.y <= max;
+        }
     }
 };
+
+pub fn someRangeContains(point: Point, edges: []const Range) bool {
+    for (edges) |edge| {
+        if (edge.containsPoint(point)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+pub fn pointInPolygon(point: Point, edges: []const Range) bool {
+    const px = point.x;
+    const py = point.y;
+
+    var inside = false;
+
+    for (0..@intCast(px)) |offset| {
+        const dx = px - offset;
+        const p = Point{ .x = dx, .y = py };
+
+        if (someRangeContains(p, edges)) {
+            inside = !inside;
+        }
+    }
+
+    return inside;
+}
 
 pub fn isValid(a: Point, b: Point, valid_points: []const Range) bool {
     const start_x = @min(a.x, b.x);
@@ -130,40 +129,35 @@ pub fn isValid(a: Point, b: Point, valid_points: []const Range) bool {
     const start_y = @min(a.y, b.y);
     const end_y = @max(a.y, b.y);
 
-    const top_left = Point{ .x = start_x, .y = start_y };
-    const top_right = Point{ .x = end_x, .y = start_y };
-    const bottom_left = Point{ .x = start_x, .y = end_y };
-    const bottom_right = Point{ .x = end_x, .y = end_y };
-
-    const line_a = Range.init(top_left, top_right);
-    const line_b = Range.init(top_left, bottom_left);
-    const line_c = Range.init(bottom_left, bottom_right);
-    const line_d = Range.init(top_right, bottom_right);
-
-    var a_valid = false;
-    var b_valid = false;
-    var c_valid = false;
-    var d_valid = false;
-
-    for (valid_points) |range| {
-        if (range.inRange(&line_a)) {
-            a_valid = true;
-        }
-
-        if (range.inRange(&line_b)) {
-            b_valid = true;
-        }
-
-        if (range.inRange(&line_c)) {
-            c_valid = true;
-        }
-
-        if (range.inRange(&line_d)) {
-            d_valid = true;
+    for (0..(end_x - start_x)) |dx| {
+        const t = Point{ .x = start_x + dx, .y = start_y };
+        if (!pointInPolygon(t, valid_points)) {
+            return false;
         }
     }
 
-    return a_valid and b_valid and c_valid and d_valid;
+    for (0..(end_x - start_x)) |dx| {
+        const t = Point{ .x = start_x + dx, .y = end_y };
+        if (!pointInPolygon(t, valid_points)) {
+            return false;
+        }
+    }
+
+    for (0..(end_y - start_y)) |dy| {
+        const t = Point{ .x = start_x, .y = start_y + dy };
+        if (!pointInPolygon(t, valid_points)) {
+            return false;
+        }
+    }
+
+    for (0..(end_y - start_y)) |dy| {
+        const t = Point{ .x = end_x, .y = start_y + dy };
+        if (!pointInPolygon(t, valid_points)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 const Point = struct {
