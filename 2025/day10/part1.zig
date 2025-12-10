@@ -59,9 +59,6 @@ pub fn main() void {
             }
         }
 
-        // end - end state
-        // solve - options we have to click to reach end state
-        // time to do a bfs
         const current_state = alloc.alloc(bool, end.len) catch @panic("Failed to alloc");
         defer alloc.free(current_state);
         for (current_state) |*val| val.* = false;
@@ -72,10 +69,33 @@ pub fn main() void {
 }
 
 pub fn minPresses(alloc: std.mem.Allocator, desired: []const bool, presses: [][]const usize, current_state: []const bool) !u64 {
-    _ = alloc;
-    _ = desired;
-    _ = presses;
-    _ = current_state;
+    try std.testing.expectEqual(desired.len, current_state.len);
+
+    for (presses) |button| {
+        const working_area = try alloc.alloc(bool, desired.len);
+        @memcpy(working_area, current_state);
+
+        press(working_area, button);
+
+        if (std.mem.eql(bool, desired, working_area)) {
+            return 1;
+        }
+    }
+
+    for (presses) |button| {
+        const working_area = try alloc.alloc(bool, desired.len);
+        @memcpy(working_area, current_state);
+
+        press(working_area, button);
+
+        return 1 + try minPresses(alloc, desired, presses, working_area);
+    }
 
     return 0;
+}
+
+pub fn press(state: []bool, button: []const usize) void {
+    for (button) |i| {
+        state[i] = !state[i];
+    }
 }
