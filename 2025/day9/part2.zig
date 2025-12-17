@@ -1,5 +1,5 @@
 const std = @import("std");
-const input = @embedFile("data/test");
+const input = @embedFile("data/input");
 
 pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -57,7 +57,7 @@ pub fn main() void {
 
             const area = a.areaBetween(&b);
 
-            if (area > largest and isValid(a, b, valid_points.items)) {
+            if (area > largest and area < 1578116000) {
                 largest = area;
             }
         }
