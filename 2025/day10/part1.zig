@@ -1,5 +1,5 @@
 const std = @import("std");
-const input = @embedFile("data/test");
+const input = @embedFile("data/input");
 
 pub fn main() void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -8,6 +8,8 @@ pub fn main() void {
     const alloc = gpa.allocator();
 
     var lines = std.mem.tokenizeAny(u8, input, "\n");
+
+    var total_min: u64 = 0;
 
     while (lines.next()) |line| {
         const cols = std.mem.count(u8, line, " ") - 1;
@@ -61,37 +63,72 @@ pub fn main() void {
 
         const current_state = alloc.alloc(bool, end.len) catch @panic("Failed to alloc");
         defer alloc.free(current_state);
-        for (current_state) |*val| val.* = false;
 
-        const min = minPresses(alloc, end, solve, current_state) catch @panic("Failed to find min");
-        std.debug.print("Min: {}\n", .{min});
+        const combinations = allCombinations(alloc, solve.len) catch @panic("Failed to alloc");
+        defer freeCombinations(alloc, combinations);
+
+        var curr_min = solve.len + 1;
+
+        for (combinations) |combo| {
+            for (current_state) |*val| val.* = false;
+            pressAll(current_state, solve, combo);
+
+            if (std.mem.eql(bool, current_state, end)) {
+                const presses = trueCount(combo);
+                if (presses < curr_min) {
+                    curr_min = presses;
+                }
+            }
+        }
+
+        total_min += curr_min;
     }
+
+    std.debug.print("Total min presses: {}\n", .{total_min});
 }
 
-pub fn minPresses(alloc: std.mem.Allocator, desired: []const bool, presses: [][]const usize, current_state: []const bool) !u64 {
-    try std.testing.expectEqual(desired.len, current_state.len);
+pub fn trueCount(combo: []const bool) u64 {
+    var res: u64 = 0;
+    for (combo) |c| {
+        if (c) res += 1;
+    }
 
-    for (presses) |button| {
-        const working_area = try alloc.alloc(bool, desired.len);
-        @memcpy(working_area, current_state);
+    return res;
+}
 
-        press(working_area, button);
+pub fn freeCombinations(alloc: std.mem.Allocator, combos: [][]const bool) void {
+    for (combos) |combo| {
+        alloc.free(combo);
+    }
 
-        if (std.mem.eql(bool, desired, working_area)) {
-            return 1;
+    alloc.free(combos);
+}
+
+pub fn allCombinations(alloc: std.mem.Allocator, len: usize) ![][]const bool {
+    const possibilities = try std.math.powi(usize, 2, len);
+
+    const buf = try alloc.alloc([]const bool, possibilities);
+    var idx: usize = 0;
+
+    for (0..possibilities) |val| {
+        const combo = try alloc.alloc(bool, len);
+        for (0..len) |i| {
+            combo[i] = val >> @truncate(i) & 0x01 == 1;
+        }
+
+        buf[idx] = combo;
+        idx += 1;
+    }
+
+    return buf;
+}
+
+pub fn pressAll(state: []bool, buttons: [][]const usize, selections: []const bool) void {
+    for (0..buttons.len) |i| {
+        if (selections[i]) {
+            press(state, buttons[i]);
         }
     }
-
-    for (presses) |button| {
-        const working_area = try alloc.alloc(bool, desired.len);
-        @memcpy(working_area, current_state);
-
-        press(working_area, button);
-
-        return 1 + try minPresses(alloc, desired, presses, working_area);
-    }
-
-    return 0;
 }
 
 pub fn press(state: []bool, button: []const usize) void {
