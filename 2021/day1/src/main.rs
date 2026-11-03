@@ -13,14 +13,20 @@ fn main() {
         .flat_map(|l| u32::from_str_radix(l, 10))
         .collect();
 
-    let mut depth_up = 0;
-    let mut prev = depths[0];
+    let mut window = vec![];
 
-    for i in 1..depths.len() {
-        if depths[i] > prev {
+    for i in 2..depths.len() {
+        window.push(depths[i - 2] + depths[i - 1] + depths[i]);
+    }
+
+    let mut depth_up = 0;
+    let mut prev = window[0];
+
+    for i in 1..window.len() {
+        if window[i] > prev {
             depth_up += 1;
         }
-        prev = depths[i];
+        prev = window[i];
     }
 
     println!("{depth_up}");
